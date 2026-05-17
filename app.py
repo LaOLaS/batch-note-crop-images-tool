@@ -9,6 +9,7 @@ SRGB_PROFILE = ImageCms.createProfile("sRGB")
 
 # Default crop values (in pixels) - change these as needed
 DEFAULT_LEFT = 50
+DEFAULT_RIGHT = 0
 DEFAULT_TOP = 30
 DEFAULT_BOTTOM = 30
 
@@ -19,6 +20,7 @@ st.markdown("Upload images and crop a fixed amount from left, top, and bottom ed
 # Crop settings in sidebar
 st.sidebar.header("Crop Settings (pixels)")
 left_crop = st.sidebar.number_input("Left", min_value=0, value=DEFAULT_LEFT, step=10)
+right_crop = st.sidebar.number_input("Right", min_value=0, value=DEFAULT_RIGHT, step=10)
 top_crop = st.sidebar.number_input("Top", min_value=0, value=DEFAULT_TOP, step=10)
 bottom_crop = st.sidebar.number_input("Bottom", min_value=0, value=DEFAULT_BOTTOM, step=10)
 
@@ -29,18 +31,18 @@ uploaded_files = st.file_uploader(
     accept_multiple_files=True
 )
 
-def crop_image(image: Image.Image, left: int, top: int, bottom: int) -> Image.Image:
-    """Crop image by removing pixels from left, top, and bottom."""
+def crop_image(image: Image.Image, left: int, right: int, top: int, bottom: int) -> Image.Image:
+    """Crop image by removing pixels from left, right, top, and bottom."""
     width, height = image.size
-    
+
     # Calculate crop box (left, upper, right, lower)
     crop_box = (
         left,
         top,
-        width,
+        width - right,
         height - bottom
     )
-    
+
     return image.crop(crop_box)
 
 def get_format_from_filename(filename: str) -> str:
@@ -101,7 +103,7 @@ def get_image_bytes(image: Image.Image, format: str = "PNG") -> bytes:
 
 if uploaded_files:
     st.markdown(f"**{len(uploaded_files)} image(s) uploaded**")
-    st.markdown(f"Crop settings: Left={left_crop}px, Top={top_crop}px, Bottom={bottom_crop}px")
+    st.markdown(f"Crop settings: Left={left_crop}px, Right={right_crop}px, Top={top_crop}px, Bottom={bottom_crop}px")
     
     cropped_images = []
     
@@ -111,11 +113,11 @@ if uploaded_files:
         original_size = image.size
         
         # Check if crop values are valid
-        if left_crop >= original_size[0] or (top_crop + bottom_crop) >= original_size[1]:
+        if (left_crop + right_crop) >= original_size[0] or (top_crop + bottom_crop) >= original_size[1]:
             st.error(f"❌ {uploaded_file.name}: Crop values exceed image dimensions ({original_size[0]}x{original_size[1]})")
             continue
-        
-        cropped = crop_image(image, left_crop, top_crop, bottom_crop)
+
+        cropped = crop_image(image, left_crop, right_crop, top_crop, bottom_crop)
         cropped_images.append((uploaded_file.name, cropped))
         
         # Display original and cropped side by side
